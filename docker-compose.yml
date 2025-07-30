@@ -1,0 +1,9 @@
+services:
+  charex-web:
+    build: .
+    image: charex-web
+    container_name: charex-web
+    ports:
+      - "9111:9111"
+    environment:
+      - PORT=9111

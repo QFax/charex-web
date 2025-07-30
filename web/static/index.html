@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Character Extractor</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Character Extractor</h1>
+    </header>
+
+    <main>
+        <section id="controls">
+            <div id="url-form-container">
+                <form id="url-form">
+                    <input type="text" id="url-input" placeholder="Enter Sakura URL" required>
+                    <button type="submit">Extract</button>
+                </form>
+                <div id="error-message" class="error"></div>
+            </div>
+            <div id="sorting-controls">
+                <span>Sort by:</span>
+                <button id="sort-name-asc">Name (A-Z)</button>
+                <button id="sort-name-desc">Name (Z-A)</button>
+                <button id="sort-date-asc">Date (Old-New)</button>
+                <button id="sort-date-desc">Date (New-Old)</button>
+            </div>
+        </section>
+
+        <section id="card-container">
+            <!-- Character cards will be dynamically inserted here -->
+        </section>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/ws.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
