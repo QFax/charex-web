@@ -1,6 +1,7 @@
 package main
 
 import (
+	"charex/internal/extractors"
 	"charex/internal/web"
 	"log"
 	"net/http"
@@ -11,7 +12,16 @@ func main() {
 	hub := web.NewHub()
 	go hub.Run()
 
-	server := web.NewServer(hub)
+	dataDir := os.Getenv("DATA_DIR")
+	if dataDir == "" {
+		dataDir = "output"
+	}
+
+	// Instantiate the extractors.
+	sakuraExtractor := extractors.NewSakuraFMExtractor()
+	janitorExtractor := extractors.NewJanitorAIExtractor()
+
+	server := web.NewServer(hub, dataDir, sakuraExtractor, janitorExtractor)
 
 	http.HandleFunc("/ws", server.ServeWs)
 	http.HandleFunc("/api/cards", server.GetCards)

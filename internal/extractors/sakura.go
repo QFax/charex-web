@@ -4,11 +4,15 @@ import (
 	"bytes"
 	"charex/internal/core"
 	"fmt"
+	"image/jpeg" // Add jpeg support
+	"image/png"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
+	"golang.org/x/image/webp"
 )
 
 // SakuraFMExtractor specializes in extracting character data from Sakura.fm URLs.
@@ -56,7 +60,16 @@ func (e *SakuraFMExtractor) Extract(input []byte) (*core.TavernCardV2, []byte, [
 	description := strings.TrimSpace(container.Find(".text-muted-foreground.line-clamp-3").First().Text())
 	scenario := strings.TrimSpace(container.Find(".text-muted-foreground.line-clamp-5").First().Text())
 	firstMes := strings.TrimSpace(doc.Find(".bg-message-assistant").First().Text())
-	creator := strings.TrimSpace(doc.Find("a > span.font-semibold").First().Text())
+	creator := "Anonymous" // Default value
+	doc.Find("div.font-bold").Each(func(i int, s *goquery.Selection) {
+		if strings.TrimSpace(s.Text()) == "Creator" {
+			creatorName := s.Next().Find("span.flex-1.truncate.tracking-tight").Text()
+			if creatorName != "" {
+				creator = strings.TrimSpace(creatorName)
+			}
+		}
+	})
+	log.Printf("Extracted data: name='%s', description='%s', scenario='%s', firstMes='%s', creator='%s'", name, description, scenario, firstMes, creator)
 	cardData := core.TavernCardData{
 		Name:                   name,
 		Description:            scenario,
@@ -113,5 +126,32 @@ func downloadImage(url string) ([]byte, error) {
 		return nil, err
 	}
 
+	contentType := http.DetectContentType(body)
+	fmt.Printf("Detected image Content-Type: %s\n", contentType) // Add logging
+	if strings.Contains(contentType, "webp") {
+		img, err := webp.Decode(bytes.NewReader(body))
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode webp: %w", err)
+		}
+
+		var buf bytes.Buffer
+		if err := png.Encode(&buf, img); err != nil {
+			return nil, fmt.Errorf("failed to encode png: %w", err)
+		}
+		return buf.Bytes(), nil
+	} else if strings.Contains(contentType, "jpeg") {
+		img, err := jpeg.Decode(bytes.NewReader(body))
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode jpeg: %w", err)
+		}
+		var buf bytes.Buffer
+		if err := png.Encode(&buf, img); err != nil {
+			return nil, fmt.Errorf("failed to encode png: %w", err)
+		}
+		return buf.Bytes(), nil
+	}
+
+	// Assume it's a PNG if not WEBP, as per original logic.
+	// The saver will validate if it's a valid PNG later.
 	return body, nil
 }

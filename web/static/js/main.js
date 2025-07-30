@@ -12,17 +12,17 @@ document.addEventListener('DOMContentLoaded', () => {
         cardDiv.className = 'card';
 
         const name = document.createElement('h3');
-        name.textContent = card.name;
+        name.textContent = card.data.name;
         cardDiv.appendChild(name);
 
-        if (card.creator) {
+        if (card.data.creator) {
             const creator = document.createElement('p');
-            creator.textContent = `By: ${card.creator}`;
+            creator.textContent = `By: ${card.data.creator}`;
             cardDiv.appendChild(creator);
         }
         
         const description = document.createElement('p');
-        description.textContent = card.description;
+        description.textContent = card.data.description;
         cardDiv.appendChild(description);
 
         return cardDiv;
@@ -77,30 +77,45 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function initialize() {
+        console.log("Initializing application");
         const data = await fetchCards();
         if (data && data.sources) {
-            allCards = data.sources.flatMap(s => s.cards.map(c => ({...c, source: s.name })));
+            allCards = data.sources.flatMap(s => s.cards.map(c => ({...c, data: c.data, source: s.name })));
             renderCards();
+            console.log("Cards loaded, connecting to WebSocket.");
+        } else {
+            console.warn("Failed to load initial card data.");
+            // Optionally, display a user-friendly message here
         }
-        connectWebSocket(handleWebSocketMessage);
-    }
+        window.ws.connect();
+        
+        window.ws.on('status', (payload) => {
+            console.log('Status update:', payload);
+            // You could display these status messages in a dedicated area if you wish.
+            if (payload.status === 'error') {
+                errorMessage.textContent = payload.message;
+            } else {
+                errorMessage.textContent = payload.message; // Or a different element
+            }
+        });
 
-    function handleWebSocketMessage(message) {
-        errorMessage.textContent = ''; // Clear previous errors
-        if (message.type === 'new_card' && message.payload) {
-            const newCard = {...message.payload.card, source: message.payload.source};
-            allCards.push(newCard);
+        window.ws.on('new_card', (payload) => {
+            errorMessage.textContent = ''; // Clear previous errors
+            const newCard = {...payload.card, data: payload.card.data, source: payload.source};
+            allCards.unshift(newCard); // Add to the beginning of the list
             renderCards();
-        } else if (message.type === 'error' && message.payload) {
-            errorMessage.textContent = message.payload.message;
-        }
+        });
+
+        window.ws.on('error', (payload) => {
+            errorMessage.textContent = payload.message;
+        });
     }
 
     urlForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const url = urlInput.value.trim();
         if (url) {
-            sendURLForExtraction(url);
+            window.ws.sendURLForExtraction(url);
             urlInput.value = '';
         }
     });
@@ -114,6 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('sort-name-desc').addEventListener('click', () => setSort('name', 'desc'));
     document.getElementById('sort-date-asc').addEventListener('click', () => setSort('create_date', 'asc'));
     document.getElementById('sort-date-desc').addEventListener('click', () => setSort('create_date', 'desc'));
+
 
     initialize();
 });

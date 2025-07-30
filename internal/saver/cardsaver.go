@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -39,8 +40,9 @@ func sanitizeFilename(name string) string {
 }
 
 // SaveCard performs the complete save operation for a character card.
-func SaveCard(card *core.TavernCardV2, rawData []byte, cardImage []byte, outputDir string, source string) error {
+func SaveCard(card *core.TavernCardV2, rawData []byte, cardImage []byte, source string) error {
 	// Create the source-specific directory.
+	outputDir := "output"
 	sourceDir := filepath.Join(outputDir, source)
 	if err := os.MkdirAll(sourceDir, 0755); err != nil {
 		return fmt.Errorf("failed to create source directory: %w", err)
@@ -52,7 +54,8 @@ func SaveCard(card *core.TavernCardV2, rawData []byte, cardImage []byte, outputD
 		baseFilename = card.Data.Name
 	}
 	baseFilename = sanitizeFilename(baseFilename)
-	
+	log.Printf("Saving card with base filename: %s", baseFilename)
+
 	// 1. Save the raw data.
 	rawPath := filepath.Join(sourceDir, baseFilename+".raw.json")
 	if err := ioutil.WriteFile(rawPath, rawData, 0644); err != nil {

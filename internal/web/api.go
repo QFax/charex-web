@@ -3,6 +3,7 @@ package web
 import (
 	"charex/internal/core"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -12,7 +13,7 @@ import (
 	"strings"
 )
 
-// CardSource represents a source of character cards (e.g., 'sakura').
+// CardSource represents a source of character cards (e.g., 'SakuraFM').
 type CardSource struct {
 	Name  string                `json:"name"`
 	Cards []core.TavernCardV2   `json:"cards"`
@@ -24,23 +25,36 @@ type CardsResponse struct {
 }
 
 func (s *Server) GetCards(w http.ResponseWriter, r *http.Request) {
-	sources, err := s.scanForCardSources("output")
+	sources, err := s.scanForCardSources()
 	if err != nil {
 		http.Error(w, "Failed to scan for card sources", http.StatusInternalServerError)
 		return
 	}
 
-	response := CardsResponse{Sources: sources}
 	w.Header().Set("Content-Type", "application/json")
+	response := CardsResponse{Sources: sources}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}
 }
 
-func (s *Server) scanForCardSources(outputDir string) ([]CardSource, error) {
+func (s *Server) scanForCardSources() ([]CardSource, error) {
 	var sources []CardSource
 
-	sourceDirs, err := ioutil.ReadDir(outputDir)
+	// Create the data directory if it doesn't exist.
+	if err := os.MkdirAll(s.DataDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create data directory: %w", err)
+	}
+
+	// Ensure that the default source directories exist.
+	if err := os.MkdirAll(filepath.Join(s.DataDir, "SakuraFM"), 0755); err != nil {
+		return nil, fmt.Errorf("failed to create sakura directory: %w", err)
+	}
+	if err := os.MkdirAll(filepath.Join(s.DataDir, "JanitorAI"), 0755); err != nil {
+		return nil, fmt.Errorf("failed to create JanitorAI directory: %w", err)
+	}
+
+	sourceDirs, err := ioutil.ReadDir(s.DataDir)
 	if err != nil {
 		return nil, err
 	}
@@ -51,17 +65,19 @@ func (s *Server) scanForCardSources(outputDir string) ([]CardSource, error) {
 		}
 
 		sourceName := sourceDir.Name()
-		sourcePath := filepath.Join(outputDir, sourceName)
+		sourcePath := filepath.Join(s.DataDir, sourceName)
 		cards, err := s.loadCardsFromSource(sourcePath)
 		if err != nil {
 			log.Printf("Error loading cards from source %s: %v", sourceName, err)
 			continue
 		}
 
-		sources = append(sources, CardSource{
-			Name:  sourceName,
-			Cards: cards,
-		})
+		if len(cards) > 0 {
+			sources = append(sources, CardSource{
+				Name:  sourceName,
+				Cards: cards,
+			})
+		}
 	}
 
 	return sources, nil
@@ -89,6 +105,7 @@ func (s *Server) loadCardsFromSource(sourcePath string) ([]core.TavernCardV2, er
 	})
 
 	for _, file := range files {
+		log.Printf("Loading card from file: %s", file.Name())
 		card, err := s.loadCard(filepath.Join(sourcePath, file.Name()))
 		if err != nil {
 			log.Printf("Error loading card %s: %v", file.Name(), err)

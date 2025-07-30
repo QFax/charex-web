@@ -7,3 +7,10 @@ services:
       - "9111:9111"
     environment:
       - PORT=9111
+      - DATA_DIR=output
+    volumes:
+      - charex-data:/output
+
+volumes:
+  charex-data:
+    name: charex-data

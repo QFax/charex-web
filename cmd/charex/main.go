@@ -12,14 +12,14 @@ import (
 
 func main() {
 	// Define command-line flags.
-	extractorType := flag.String("type", "", "The type of extractor to use ('sakura' or 'janitor').")
+	extractorType := flag.String("type", "", "The type of extractor to use ('SakuraFM' or 'JanitorAI').")
 	inputFile := flag.String("input", "", "Path to the input file (containing a URL for sakura, or JSON for janitor).")
 	outputDir := flag.String("output", "output", "Directory to save the output files.")
 	flag.Parse()
 
 	// Validate flags.
 	if *extractorType == "" || *inputFile == "" {
-		fmt.Println("Usage: go run cmd/charex/main.go --type=<sakura|janitor> --input=<filepath>")
+		fmt.Println("Usage: go run cmd/charex/main.go --type=<SakuraFM|JanitorAI> --input=<filepath>")
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
@@ -33,9 +33,9 @@ func main() {
 	// Select the extractor based on the type flag.
 	var extractor extractors.Extractor
 	switch *extractorType {
-	case "sakura":
+	case "SakuraFM":
 		extractor = extractors.NewSakuraFMExtractor()
-	case "janitor":
+	case "JanitorAI":
 		extractor = extractors.NewJanitorAIExtractor()
 	default:
 		log.Fatalf("Unknown extractor type: %s", *extractorType)
@@ -51,7 +51,7 @@ func main() {
 
 	// Save the card.
 	log.Printf("Saving card to directory: %s", *outputDir)
-	if err := saver.SaveCard(card, rawData, cardImage, *outputDir); err != nil {
+	if err := saver.SaveCard(card, rawData, cardImage, "unspecified"); err != nil {
 		log.Fatalf("Failed to save card: %v", err)
 	}
 
